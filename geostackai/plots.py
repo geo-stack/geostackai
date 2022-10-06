@@ -55,7 +55,4 @@ def plot_loss(filename: str) -> Figure:
 
 
 if __name__ == "__main__":
-    plot_loss("D:/Projets/geostack/ctspec_ai/CTSpecAiDataSet_20220706/"
-              "Models/categories_v1/metrics.json")
-    plot_loss("D:/Projets/geostack/ctspec_ai/CTSpecAiDataSet_20220706/"
-              "Models/supercategories_v1/metrics.json")
+    plot_loss("./test/metrics.json")
