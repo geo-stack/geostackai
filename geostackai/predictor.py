@@ -120,3 +120,25 @@ class Predictor(DefaultPredictor):
         outputs = format_outputs(prediction)
 
         return outputs
+
+
+if __name__ == "__main__":
+    from argparse import Namespace
+    import json
+
+    # Define the list of class names.
+    json_filepath = "./test/train_labels.json"
+    with open(json_filepath, "rt") as jsonfile:
+        json_data = json.load(jsonfile)
+    class_names = [cat['name'] for cat in json_data['categories']]
+
+    model_path = "./test/model_final.pth"
+
+    options = Namespace(
+        model=model_path,
+        num_classes=len(class_names),
+        treshold=0.2
+        )
+    predictor = Predictor(options)
+
+    preds = predictor.predict("./test/tile_row0_col0.png")
