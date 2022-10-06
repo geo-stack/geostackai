@@ -34,7 +34,6 @@ def plot_loss(filename: str) -> Figure:
     -------
     Figure
         A matplotlib figure.
-
     """
     with open(filename, 'r') as txtfile:
         lines = txtfile.readlines()
@@ -46,8 +45,9 @@ def plot_loss(filename: str) -> Figure:
     fig, ax = plt.subplots(figsize=(5, 3))
     ax.plot(iters, total_loss)
 
-    ax.set_xlabel('iterations', labelpad=10)
+    ax.set_xlabel('Iterations', labelpad=10)
     ax.set_ylabel('Total Loss', labelpad=10)
+    ax.axis(ymin=0, ymax=np.ceil(np.max(total_loss)))
 
     fig.tight_layout()
 
@@ -55,5 +55,7 @@ def plot_loss(filename: str) -> Figure:
 
 
 if __name__ == "__main__":
-    plot_loss("D:/Projets/geostack/nmg_detection_mb/Models/"
-              "model_lr_0.0003/metrics.json")
+    plot_loss("D:/Projets/geostack/ctspec_ai/CTSpecAiDataSet_20220706/"
+              "Models/categories_v1/metrics.json")
+    plot_loss("D:/Projets/geostack/ctspec_ai/CTSpecAiDataSet_20220706/"
+              "Models/supercategories_v1/metrics.json")
