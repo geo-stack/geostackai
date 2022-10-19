@@ -89,8 +89,13 @@ class Predictor(DefaultPredictor):
 
         cfg = get_cfg()
 
-        cfg.merge_from_file(model_zoo.get_config_file(
-            "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
+        try:
+            config_file = options.config_file
+        except AttributeError:
+            config_file = model_zoo.get_config_file(
+                "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
+
+        cfg.merge_from_file(config_file)
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = options.num_classes
 
         cfg.MODEL.WEIGHTS = options.model
