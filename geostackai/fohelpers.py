@@ -10,14 +10,15 @@
 # =============================================================================
 
 from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from fiftyone import Dataset
 
 # ---- Standard imports
 import sys
 import json
 import os
 import os.path as osp
-
-# We need to import 'annotations' from '__future__' for python versions < 3.9.
 
 # ---- Third party app
 import fiftyone as fo
@@ -71,8 +72,7 @@ def load_dataset_from_json(dataset_dir, data_dir, dataset_name):
         name=dataset_name)
 
 
-def save_dataset_to_json(export_dir, dataset):
-    rel_dir = dataset.first()['filepath']
+def save_dataset_to_json(dataset: Dataset, export_dir: str, rel_dir: str):
     dataset.export(
         export_dir=export_dir,
         dataset_type=fo.types.FiftyOneDataset,
