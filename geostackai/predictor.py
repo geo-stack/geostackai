@@ -128,16 +128,18 @@ if __name__ == "__main__":
 
     # Define the list of class names.
     json_filepath = "./test/train_labels.json"
+    model_pth = "D:/Projets/geostack/ctspec_ai/Models/model_v3/model_final.pth"
+
     with open(json_filepath, "rt") as jsonfile:
         json_data = json.load(jsonfile)
     class_names = [cat['name'] for cat in json_data['categories']]
 
-    model_path = "./test/model_final.pth"
-
     options = Namespace(
-        model=model_path,
+        model=model_pth,
         num_classes=len(class_names),
-        treshold=0.2
+        treshold=0.2,
+        config_file=model_zoo.get_config_file(
+            "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
         )
     predictor = Predictor(options)
 
