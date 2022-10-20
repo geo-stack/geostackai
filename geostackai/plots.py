@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 import json
 
 # ---- Third party imports
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -39,11 +40,15 @@ def plot_loss(filename: str) -> Figure:
         lines = txtfile.readlines()
     data = [json.loads(line) for line in lines]
 
-    iters = np.array([d['iteration'] for d in data])
-    total_loss = np.array([d['total_loss'] for d in data])
+    df = pd.DataFrame(data)
+    df = df.set_index('iteration')
+
+    total_loss = df['total_loss'].dropna()
+    val_total_loss = df['val_total_loss'].dropna()
 
     fig, ax = plt.subplots(figsize=(5, 3))
-    ax.plot(iters, total_loss)
+    ax.plot(total_loss)
+    ax.plot(val_total_loss, 'o', color='orange', ms=3)
 
     ax.set_xlabel('Iterations', labelpad=10)
     ax.set_ylabel('Total Loss', labelpad=10)
@@ -51,8 +56,11 @@ def plot_loss(filename: str) -> Figure:
 
     fig.tight_layout()
 
-    return fig
+    return data
 
 
 if __name__ == "__main__":
-    plot_loss("./test/metrics.json")
+    fig = plot_loss(
+        "G:/Shared drives/2_PROJETS/211209_CTSpec_AI_inspection_conduites/"
+        "2_TECHNIQUE/6_TRAITEMENT/1_DATA/CTSpecAiDataSet_20220706/Models/"
+        "metrics - Copy.json")
