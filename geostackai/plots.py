@@ -45,14 +45,20 @@ def plot_loss(filename: str) -> Figure:
 
     total_loss = df['total_loss'].dropna()
     val_total_loss = df['val_total_loss'].dropna()
+    val_loss_cls = df['val_loss_cls'].dropna()
 
-    fig, ax = plt.subplots(figsize=(5, 3))
-    ax.plot(total_loss)
-    ax.plot(val_total_loss, 'o', color='orange', ms=3)
+    fig, ax = plt.subplots(figsize=(7, 3))
+    ax.plot(total_loss, label='total loss')
+    ax.plot(val_total_loss, '-.', color='orange', ms=3, label='val total loss')
+    ax.plot(val_loss_cls, '-.', color='green', ms=3, label='val loss class')
 
     ax.set_xlabel('Iterations', labelpad=10)
     ax.set_ylabel('Total Loss', labelpad=10)
     ax.axis(ymin=0, ymax=np.ceil(np.max(total_loss)))
+    ax.axis(ymax=1)
+
+    ax.legend()
+    ax.grid(color='lightgrey')
 
     fig.tight_layout()
 
@@ -63,4 +69,4 @@ if __name__ == "__main__":
     fig = plot_loss(
         "G:/Shared drives/2_PROJETS/211209_CTSpec_AI_inspection_conduites/"
         "2_TECHNIQUE/6_TRAITEMENT/1_DATA/CTSpecAiDataSet_20220706/Models/"
-        "metrics - Copy.json")
+        "metrics.json")
