@@ -22,7 +22,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot_loss(filename: str) -> Figure:
+def plot_loss(filename: str, title: str = None) -> Figure:
     """
     Plot total loss vs the number of iterations.
 
@@ -47,15 +47,18 @@ def plot_loss(filename: str) -> Figure:
     val_total_loss = df['val_total_loss'].dropna()
     val_loss_cls = df['val_loss_cls'].dropna()
 
-    fig, ax = plt.subplots(figsize=(7, 3))
+    fig, ax = plt.subplots(figsize=(7, 3.5))
     ax.plot(total_loss, label='total loss')
     ax.plot(val_total_loss, '-.', color='orange', ms=3, label='val total loss')
     ax.plot(val_loss_cls, '-.', color='green', ms=3, label='val loss class')
 
     ax.set_xlabel('Iterations', labelpad=10)
-    ax.set_ylabel('Total Loss', labelpad=10)
+    ax.set_ylabel('Loss', labelpad=10)
     ax.axis(ymin=0, ymax=np.ceil(np.max(total_loss)))
     ax.axis(ymax=1)
+
+    if title is not None:
+        fig.suptitle(title)
 
     ax.legend()
     ax.grid(color='lightgrey')
