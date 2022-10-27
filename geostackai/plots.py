@@ -22,7 +22,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot_loss(filename: str, title: str = None) -> Figure:
+def plot_loss(filename: str, title: str = None,
+              rolling_window: int = None) -> Figure:
     """
     Plot total loss vs the number of iterations.
 
@@ -30,7 +31,11 @@ def plot_loss(filename: str, title: str = None) -> Figure:
     ----------
     filename : str
         A path to a metrics.json file.
-
+    title: str
+        The title of the figure.
+    rolling_window: int
+        Size of the moving window to apply rolling window calculations on
+        the loss data.
     Returns
     -------
     Figure
@@ -46,6 +51,14 @@ def plot_loss(filename: str, title: str = None) -> Figure:
     total_loss = df['total_loss'].dropna()
     val_total_loss = df['val_total_loss'].dropna()
     val_loss_cls = df['val_loss_cls'].dropna()
+
+    if rolling_window is not None:
+        total_loss = total_loss.rolling(
+            rolling_window, center=True).mean()
+        val_total_loss = val_total_loss.rolling(
+            rolling_window, center=True).mean()
+        val_loss_cls = val_loss_cls.rolling(
+            rolling_window, center=True).mean()
 
     fig, ax = plt.subplots(figsize=(7, 3.5))
     ax.plot(total_loss, label='total loss')
