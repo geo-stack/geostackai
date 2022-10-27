@@ -89,6 +89,9 @@ class Predictor(DefaultPredictor):
 
         cfg = get_cfg()
 
+        # https://github.com/facebookresearch/detectron2/issues/2082
+        cfg.set_new_allowed(True)
+
         try:
             config_file = options.config_file
         except AttributeError:
