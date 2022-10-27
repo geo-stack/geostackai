@@ -99,7 +99,10 @@ class Predictor(DefaultPredictor):
                 "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
 
         cfg.merge_from_file(config_file)
-        cfg.MODEL.ROI_HEADS.NUM_CLASSES = options.num_classes
+        try:
+            cfg.MODEL.ROI_HEADS.NUM_CLASSES = options.num_classes
+        except AttributeError:
+            pass
 
         cfg.MODEL.WEIGHTS = options.model
         cfg.SOLVER.IMS_PER_BATCH = 1
