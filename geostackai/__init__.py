@@ -9,7 +9,7 @@
 # https://github.com/geo-stack/geostackai
 # =============================================================================
 
-version_info = (0, 0, 1, 'dev0')
+version_info = (0, 1, 0, 'dev0')
 __version__ = '.'.join(map(str, version_info))
 __project_url__ = "https://github.com/geo-stack/geostackai"
 
