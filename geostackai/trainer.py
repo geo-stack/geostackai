@@ -98,13 +98,21 @@ class ValLossHook(HookBase):
         self.trainer.storage.put_scalars(timetest=12)
 
 
-class ValLossTrainer(DefaultTrainer):
+class Trainer(DefaultTrainer):
     """
-    Overloads build_hooks to add a hook to calculate loss on
-    the test set during training.
+    A trainer with validation loss evaluation and data augmentation
+    capabilities.
     """
 
+    @classmethod
+    def build_train_loader(cls, cfg):
+        return build_detection_train_loader(cfg, mapper=custom_mapper)
+
     def build_hooks(self):
+        """
+        Overloads build_hooks to add a hook to calculate loss on
+        the test set during training.
+        """
         hooks = super().build_hooks()
         hooks.insert(-1, ValLossHook(
             eval_period=self.cfg.EVAL_PERIOD,
@@ -116,13 +124,3 @@ class ValLossTrainer(DefaultTrainer):
             ))
 
         return hooks
-
-
-class Trainer(ValLossTrainer):
-    """
-    A trainer with val loss evaluation and data augmentation capabilities.
-    """
-
-    @classmethod
-    def build_train_loader(cls, cfg):
-        return build_detection_train_loader(cfg, mapper=custom_mapper)
