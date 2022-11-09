@@ -9,11 +9,54 @@
 # https://github.com/geo-stack/geostackai
 # =============================================================================
 
+import copy
 import torch
 from detectron2.engine import DefaultTrainer
-from detectron2.data import DatasetMapper, build_detection_test_loader
+from detectron2.data import (
+    DatasetMapper, build_detection_test_loader, build_detection_train_loader,
+    detection_utils)
+import detectron2.data.transforms as T
 from detectron2.engine import HookBase
 import detectron2.utils.comm as comm
+
+
+def custom_mapper(dataset_dict):
+    """
+    A custom DatasetMapper to perform data augmentation in Detectron2.
+
+    https://gilberttanner.com/blog/detectron-2-object-detection-with-pytorch/
+    """
+    dataset_dict = copy.deepcopy(dataset_dict)
+
+    image = detection_utils.read_image(
+        dataset_dict["file_name"], format="BGR")
+    transform_list = [
+        T.Resize((800, 600)),
+        T.RandomBrightness(0.8, 1.8),
+        T.RandomContrast(0.6, 1.3),
+        T.RandomSaturation(0.8, 1.4),
+        T.RandomRotation(angle=[90, 90]),
+        T.RandomLighting(0.7),
+        T.RandomFlip(prob=0.4, horizontal=False, vertical=True),
+    ]
+    image, transforms = T.apply_transform_gens(transform_list, image)
+
+    dataset_dict["image"] = torch.as_tensor(
+        image.transpose(2, 0, 1).astype("float32"))
+
+    annos = [
+        detection_utils.transform_instance_annotations(
+            obj, transforms, image.shape[:2])
+        for obj in dataset_dict.pop("annotations")
+        if obj.get("iscrowd", 0) == 0
+        ]
+    instances = detection_utils.annotations_to_instances(
+        annos, image.shape[:2])
+
+    dataset_dict["instances"] = detection_utils.filter_empty_instances(
+        instances)
+
+    return dataset_dict
 
 
 class ValLossHook(HookBase):
@@ -55,7 +98,7 @@ class ValLossHook(HookBase):
         self.trainer.storage.put_scalars(timetest=12)
 
 
-class Trainer(DefaultTrainer):
+class ValLossTrainer(DefaultTrainer):
     """
     Overloads build_hooks to add a hook to calculate loss on
     the test set during training.
@@ -73,3 +116,13 @@ class Trainer(DefaultTrainer):
             ))
 
         return hooks
+
+
+class Trainer(ValLossTrainer):
+    """
+    A trainer with val loss evaluation and data augmentation capabilities.
+    """
+
+    @classmethod
+    def build_train_loader(cls, cfg):
+        return build_detection_train_loader(cfg, mapper=custom_mapper)
