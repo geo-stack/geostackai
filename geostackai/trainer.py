@@ -18,6 +18,7 @@ from detectron2.data import (
 import detectron2.data.transforms as T
 from detectron2.engine import HookBase
 import detectron2.utils.comm as comm
+import cv2
 
 
 def custom_mapper(dataset_dict):
@@ -28,8 +29,12 @@ def custom_mapper(dataset_dict):
     """
     dataset_dict = copy.deepcopy(dataset_dict)
 
-    image = detection_utils.read_image(
-        dataset_dict["file_name"], format="BGR")
+    image = cv2.imread(dataset_dict['file_name'])
+
+    # Remove interlacing artifacts in images taken from lower
+    # resolution videos
+    image = cv2.GaussianBlur(image, (5, 5), 0)
+
     transform_list = [
         T.Resize((800, 600)),
         T.RandomBrightness(0.8, 1.8),
