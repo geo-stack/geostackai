@@ -36,7 +36,6 @@ def custom_mapper(dataset_dict):
     image = cv2.GaussianBlur(image, (5, 5), 0)
 
     transform_list = [
-        T.Resize((800, 600)),
         T.RandomBrightness(0.8, 1.8),
         T.RandomContrast(0.6, 1.3),
         T.RandomSaturation(0.8, 1.4),
