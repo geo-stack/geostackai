@@ -74,7 +74,11 @@ class ValLossHook(HookBase):
         self._data_loader = iter(data_loader)
 
     def _do_loss_eval(self):
-        data = next(self._data_loader)
+        try:
+            data = next(self._data_loader)
+        except StopIteration:
+            return
+
         with torch.no_grad():
             loss_dict = self.trainer.model(data)
 
