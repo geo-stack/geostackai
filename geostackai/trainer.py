@@ -22,15 +22,16 @@ import cv2
 import pandas as pd
 
 
-def custom_mapper(dataset_dict):
+def custom_train_mapper(dataset_dict):
     """
-    A custom DatasetMapper to perform data augmentation in Detectron2.
+    A custom dataset mapper to perform data augmentation on the
+    training dataset.
 
     https://gilberttanner.com/blog/detectron-2-object-detection-with-pytorch/
     """
     dataset_dict = copy.deepcopy(dataset_dict)
 
-    image = cv2.imread(dataset_dict['file_name'])
+    image = detection_utils.read_image(dataset_dict["file_name"], format="BGR")
 
     # Remove interlacing artifacts in images taken from lower
     # resolution videos
@@ -58,8 +59,32 @@ def custom_mapper(dataset_dict):
     instances = detection_utils.annotations_to_instances(
         annos, image.shape[:2])
 
-    dataset_dict["instances"] = detection_utils.filter_empty_instances(
-        instances)
+    dataset_dict["instances"] = (
+        detection_utils.filter_empty_instances(instances))
+
+    return dataset_dict
+
+
+def custom_test_mapper(dataset_dict):
+    """
+    A custom dataset mapper for the validation dataset.
+    """
+    dataset_dict = copy.deepcopy(dataset_dict)
+    image = detection_utils.read_image(dataset_dict["file_name"], format="BGR")
+
+    # Remove interlacing artifacts in images taken from lower
+    # resolution videos
+    image = cv2.GaussianBlur(image, (5, 5), 0)
+
+    annos = [
+        obj for obj in dataset_dict.pop("annotations") if
+        obj.get("iscrowd", 0) == 0
+        ]
+    instances = detection_utils.annotations_to_instances(
+        annos, image.shape[:2])
+
+    dataset_dict["instances"] = (
+        detection_utils.filter_empty_instances(instances))
 
     return dataset_dict
 
@@ -114,7 +139,7 @@ class Trainer(DefaultTrainer):
 
     @classmethod
     def build_train_loader(cls, cfg):
-        return build_detection_train_loader(cfg, mapper=custom_mapper)
+        return build_detection_train_loader(cfg, mapper=custom_train_mapper)
 
     def build_hooks(self):
         """
@@ -127,7 +152,7 @@ class Trainer(DefaultTrainer):
             data_loader=build_detection_test_loader(
                 self.cfg,
                 self.cfg.DATASETS.TEST[0],
-                DatasetMapper(self.cfg, True))
+                mapper=custom_test_mapper)
             ))
 
         return hooks
