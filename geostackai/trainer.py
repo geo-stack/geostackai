@@ -67,6 +67,7 @@ def custom_mapper(dataset_dict):
 class ValLossHook(HookBase):
     # https://github.com/facebookresearch/detectron2/issues/810#issuecomment-935713524
     # https://gist.github.com/ortegatron/c0dad15e49c2b74de8bb09a5615d9f6b
+    # https://eidos-ai.medium.com/training-on-detectron2-with-a-validation-set-and-plot-loss-on-it-to-avoid-overfitting-6449418fbf4e
 
     def __init__(self, eval_period, data_loader):
         super().__init__()
