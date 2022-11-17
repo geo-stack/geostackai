@@ -40,7 +40,6 @@ def get_loss(filename: str) -> pd.DataFrame:
     with open(filename, 'r') as txtfile:
         lines = txtfile.readlines()
     data = [json.loads(line) for line in lines]
-    return data
     df = pd.DataFrame(data)
     df = df.set_index('iteration')
     return df
@@ -103,7 +102,9 @@ def plot_loss(filename: str, title: str = None,
 
 
 if __name__ == "__main__":
-    loss_data = get_loss(
+    filename = (
         "G:/Shared drives/2_PROJETS/211209_CTSpec_AI_inspection_conduites/"
-        "2_TECHNIQUE/6_TRAITEMENT/1_DATA/Training/Models/"
-        "model_v6/metrics.json")
+        "2_TECHNIQUE/6_TRAITEMENT/1_DATA/Training/Models/metrics.json"
+    )
+    df = get_loss(filename)
+    fig = plot_loss(filename)
