@@ -31,7 +31,7 @@ def custom_train_mapper(dataset_dict):
     """
     dataset_dict = copy.deepcopy(dataset_dict)
 
-    image = cv2.imread(dataset_dict['file_name'])
+    image = detection_utils.read_image(dataset_dict["file_name"], format="BGR")
 
     # Remove interlacing artifacts in images taken from lower
     # resolution videos
