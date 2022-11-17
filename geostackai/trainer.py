@@ -123,7 +123,6 @@ class Trainer(DefaultTrainer):
         hooks = super().build_hooks()
         hooks.insert(-1, ValLossHook(
             eval_period=self.cfg.EVAL_PERIOD,
-            model=self.model,
             data_loader=build_detection_test_loader(
                 self.cfg,
                 self.cfg.DATASETS.TEST[0],
