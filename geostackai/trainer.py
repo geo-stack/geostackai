@@ -76,6 +76,9 @@ def custom_test_mapper(dataset_dict):
     # resolution videos
     image = cv2.GaussianBlur(image, (5, 5), 0)
 
+    dataset_dict["image"] = torch.as_tensor(
+        image.transpose(2, 0, 1).astype("float32"))
+
     annos = [
         obj for obj in dataset_dict.pop("annotations") if
         obj.get("iscrowd", 0) == 0
