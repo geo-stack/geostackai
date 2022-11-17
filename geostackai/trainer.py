@@ -97,7 +97,9 @@ class ValLossHook(HookBase):
         """
         next_iter = self.trainer.iter + 1
         is_final = next_iter == self.trainer.max_iter
-        if is_final or (self._period > 0 and next_iter % self._period == 0):
+        is_period = (self._eval_period > 0 and
+                     next_iter % self._eval_period == 0)
+        if is_final or is_period:
             self._do_loss_eval()
         self.trainer.storage.put_scalars(timetest=12)
 
