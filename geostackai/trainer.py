@@ -19,6 +19,7 @@ import detectron2.data.transforms as T
 from detectron2.engine import HookBase
 import detectron2.utils.comm as comm
 import cv2
+import pandas as pd
 
 
 def custom_mapper(dataset_dict):
