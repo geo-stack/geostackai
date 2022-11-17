@@ -22,9 +22,10 @@ import cv2
 import pandas as pd
 
 
-def custom_mapper(dataset_dict):
+def custom_train_mapper(dataset_dict):
     """
-    A custom DatasetMapper to perform data augmentation in Detectron2.
+    A custom dataset mapper to perform data augmentation on the
+    training dataset.
 
     https://gilberttanner.com/blog/detectron-2-object-detection-with-pytorch/
     """
