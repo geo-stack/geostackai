@@ -67,32 +67,28 @@ class ValLossHook(HookBase):
     # https://github.com/facebookresearch/detectron2/issues/810#issuecomment-935713524
     # https://gist.github.com/ortegatron/c0dad15e49c2b74de8bb09a5615d9f6b
 
-    def __init__(self, eval_period, model, data_loader):
+    def __init__(self, eval_period, data_loader):
         super().__init__()
-        self._model = model
-        self._period = eval_period
-        self._data_loader = iter(data_loader)
+        self._eval_period = eval_period
+        self._data_loader = data_loader
 
     def _do_loss_eval(self):
-        try:
-            data = next(self._data_loader)
-        except StopIteration:
-            return
-
         with torch.no_grad():
-            loss_dict = self.trainer.model(data)
+            loss_dict_reduced_stack = []
+            for data in self._data_loader:
+                loss_dict = self.trainer.model(data)
+                loss_dict_reduced = {
+                    "val_" + k: v.item() for k, v in
+                    comm.reduce_dict(loss_dict).items()}
+                loss_dict_reduced_stack.append(loss_dict_reduced)
 
-            losses = sum(loss_dict.values())
-            assert torch.isfinite(losses).all(), loss_dict
-
-            loss_dict_reduced = {
-                "val_" + k: v.item() for k, v in
-                comm.reduce_dict(loss_dict).items()}
-            losses_reduced = sum(loss for loss in loss_dict_reduced.values())
             if comm.is_main_process():
+                df = pd.DataFrame(loss_dict_reduced_stack)
+                df['val_total_loss'] = df.sum(axis=1)
+                mean_values = df.mean(axis=0)
+
                 self.trainer.storage.put_scalars(
-                    val_total_loss=losses_reduced,
-                    **loss_dict_reduced)
+                    **mean_values.to_dict())
 
     def after_step(self):
         """
