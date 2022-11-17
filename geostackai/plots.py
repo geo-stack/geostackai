@@ -22,6 +22,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+def get_loss(filename: str) -> pd.DataFrame:
+    """
+    Get loss values from a metrics.json file.
+
+    Parameters
+    ----------
+    filename : str
+        A path to a metrics.json file.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        A pandas dataframe containing the loss values.
+
+    """
+    with open(filename, 'r') as txtfile:
+        lines = txtfile.readlines()
+    data = [json.loads(line) for line in lines]
+    return data
+    df = pd.DataFrame(data)
+    df = df.set_index('iteration')
+    return df
+
+
 def plot_loss(filename: str, title: str = None,
               rolling_window: int = None) -> Figure:
     """
@@ -41,12 +65,7 @@ def plot_loss(filename: str, title: str = None,
     Figure
         A matplotlib figure.
     """
-    with open(filename, 'r') as txtfile:
-        lines = txtfile.readlines()
-    data = [json.loads(line) for line in lines]
-
-    df = pd.DataFrame(data)
-    df = df.set_index('iteration')
+    df = get_loss(filename)
 
     total_loss = df['total_loss'].dropna()
     val_total_loss = df['val_total_loss'].dropna()
@@ -78,11 +97,13 @@ def plot_loss(filename: str, title: str = None,
 
     fig.tight_layout()
 
-    return data
+    fig.data = df
+
+    return fig
 
 
 if __name__ == "__main__":
-    fig = plot_loss(
+    loss_data = get_loss(
         "G:/Shared drives/2_PROJETS/211209_CTSpec_AI_inspection_conduites/"
-        "2_TECHNIQUE/6_TRAITEMENT/1_DATA/CTSpecAiDataSet_20220706/Models/"
-        "metrics.json")
+        "2_TECHNIQUE/6_TRAITEMENT/1_DATA/Training/Models/"
+        "model_v6/metrics.json")
