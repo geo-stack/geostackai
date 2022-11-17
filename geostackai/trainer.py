@@ -35,7 +35,7 @@ def custom_train_mapper(dataset_dict):
 
     # Remove interlacing artifacts in images taken from lower
     # resolution videos
-    image = cv2.GaussianBlur(image, (5, 5), 0)
+    image = cv2.GaussianBlur(image, (3, 3), 0)
 
     transform_list = [
         T.RandomBrightness(0.8, 1.8),
@@ -74,7 +74,7 @@ def custom_test_mapper(dataset_dict):
 
     # Remove interlacing artifacts in images taken from lower
     # resolution videos
-    image = cv2.GaussianBlur(image, (5, 5), 0)
+    image = cv2.GaussianBlur(image, (3, 3), 0)
 
     dataset_dict["image"] = torch.as_tensor(
         image.transpose(2, 0, 1).astype("float32"))

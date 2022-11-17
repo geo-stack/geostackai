@@ -119,13 +119,18 @@ class Predictor(DefaultPredictor):
 
         super().__init__(cfg)
 
-    def predict(self, path_or_url: str):
+    def predict(self, path_or_url: str, smooth: bool = True):
         if path_or_url.startswith(('http', 'https')):
             image_reponse = requests.get(path_or_url)
             image_as_np_array = np.frombuffer(image_reponse.content, np.uint8)
             image = cv2.imdecode(image_as_np_array, cv2.IMREAD_COLOR)
         else:
             image = cv2.imread(path_or_url)
+
+        if smooth is True:
+            # Smooth image to remove interlacing artifacts that are
+            # present in images taken from lower resolution videos
+            image = cv2.GaussianBlur(image, (3, 3), 0)
 
         prediction = self(image)
         outputs = format_outputs(prediction)
