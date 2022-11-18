@@ -36,6 +36,7 @@ def transform_dataset_dict(dataset_dict, transform_list: list = None):
     new_height = int(image.shape[0] * vscale_factor)
     new_width = int(image.shape[0] * vscale_factor)
 
+    # Apply transformations to the image.
     transform_list = [] if transform_list is None else transform_list
     transform_list.insert(0, T.Resize((new_width, new_height)))
 
@@ -44,6 +45,7 @@ def transform_dataset_dict(dataset_dict, transform_list: list = None):
     dataset_dict["image"] = torch.as_tensor(
         image.transpose(2, 0, 1).astype("float32"))
 
+    # Apply transformations to the annotations.
     annos = [
         detection_utils.transform_instance_annotations(
             obj, transforms, image.shape[:2])
