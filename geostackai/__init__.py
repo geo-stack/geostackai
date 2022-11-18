@@ -14,5 +14,5 @@ __version__ = '.'.join(map(str, version_info))
 __project_url__ = "https://github.com/geo-stack/geostackai"
 
 
-from geostackai.plots import plot_loss, get_loss
+from geostackai.loss import plot_loss, get_loss
 from geostackai.fohelpers import save_dataset_to_json
