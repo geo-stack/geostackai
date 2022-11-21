@@ -20,12 +20,14 @@ import requests
 from detectron2 import model_zoo
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
-from detectron2.utils.logger import setup_logger
-setup_logger()
+import detectron2.data.transforms as T
 
 # ---- Third party imports
 import torch
 import numpy as np
+
+# ---- Local imports
+from geostackai.trainer import BASE_HEIGHT
 
 
 def format_outputs(prediction):
