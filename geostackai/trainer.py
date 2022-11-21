@@ -32,14 +32,13 @@ def transform_dataset_dict(dataset_dict, transform_list: list = None):
     image = cv2.GaussianBlur(image, (3, 3), 0)
 
     # Calcul scale to height new image size.
-    vscale_factor = image.shape[0] / BASE_HEIGHT
+    vscale_factor = BASE_HEIGHT / image.shape[0]
     new_height = int(image.shape[0] * vscale_factor)
-    new_width = int(image.shape[0] * vscale_factor)
+    new_width = int(image.shape[1] * vscale_factor)
 
     # Apply transformations to the image.
     transform_list = [] if transform_list is None else transform_list
-    transform_list.insert(0, T.Resize((new_width, new_height)))
-
+    transform_list.insert(0, T.Resize((new_height, new_width)))
     image, transforms = T.apply_transform_gens(transform_list, image)
 
     dataset_dict["image"] = torch.as_tensor(
