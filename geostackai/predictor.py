@@ -20,12 +20,14 @@ import requests
 from detectron2 import model_zoo
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
-from detectron2.utils.logger import setup_logger
-setup_logger()
+import detectron2.data.transforms as T
 
 # ---- Third party imports
 import torch
 import numpy as np
+
+# ---- Local imports
+from geostackai.trainer import BASE_HEIGHT
 
 
 def format_outputs(prediction):
@@ -44,10 +46,6 @@ def format_outputs(prediction):
         )
     try:
         data_out['masks'] = prediction['instances'].pred_masks.cpu().numpy()
-        data_out['segmentation'] = ([
-            list(mask_to_segmentation(out.astype(float))) for
-            out in prediction['instances'].pred_masks.cpu().numpy()
-            ])
     except AttributeError:
         pass
     return data_out
@@ -119,7 +117,7 @@ class Predictor(DefaultPredictor):
 
         super().__init__(cfg)
 
-    def predict(self, path_or_url: str, smooth: bool = True):
+    def predict(self, path_or_url: str):
         if path_or_url.startswith(('http', 'https')):
             image_reponse = requests.get(path_or_url)
             image_as_np_array = np.frombuffer(image_reponse.content, np.uint8)
@@ -127,24 +125,65 @@ class Predictor(DefaultPredictor):
         else:
             image = cv2.imread(path_or_url)
 
-        if smooth is True:
-            # Smooth image to remove interlacing artifacts that are
-            # present in images taken from lower resolution videos
-            image = cv2.GaussianBlur(image, (3, 3), 0)
+        # Calcul scale to height new image size.
+        orig_height = image.shape[0]
+        orig_width = image.shape[1]
 
-        prediction = self(image)
-        outputs = format_outputs(prediction)
+        vscale_factor = BASE_HEIGHT / orig_height
+        new_height = int(image.shape[0] * vscale_factor)
+        new_width = int(image.shape[1] * vscale_factor)
 
-        return outputs
+        # Apply transformations to the image.
+        image, transforms = T.apply_transform_gens(
+            [T.Resize((new_height, new_width))], image)
+
+        # Smooth image to remove interlacing artifacts that are
+        # present in images taken from lower resolution videos
+        image = cv2.GaussianBlur(image, (3, 3), 0)
+
+        # Do the prediction.
+        outputs = self(image)
+
+        prediction = format_outputs(outputs)
+
+        # Transform the predictions back to the original image size.
+        transform = T.Resize((orig_height, orig_width)).get_transform(image)
+
+        prediction['masks'] = [
+            transform.apply_segmentation(mask.astype(np.uint8))
+            for mask in prediction['masks']
+            ]
+        prediction['boxes'] = [
+            transform.apply_coords(
+                np.array(bbox).reshape(-1, 2)).flatten().tolist()
+            for bbox in prediction['boxes']
+            ]
+        prediction['segmentation'] = ([
+            list(mask_to_segmentation(mask.astype(float))) for
+            mask in prediction['masks']
+            ])
+
+        return prediction
 
 
 if __name__ == "__main__":
     from argparse import Namespace
     import json
+    import os.path as osp
+    import matplotlib.pyplot as plt
+    from matplotlib.transforms import ScaledTranslation
+    
+    import detectron2.utils.video_visualizer
+    
+    plt.close('all')
+
+    fwidth = 6
 
     # Define the list of class names.
-    json_filepath = "./test/train_labels.json"
-    model_pth = "D:/Projets/geostack/ctspec_ai/Models/model_v3/model_final.pth"
+    json_filepath = "G:/Shared drives/2_PROJETS/211209_CTSpec_AI_inspection_conduites/2_TECHNIQUE/6_TRAITEMENT/1_DATA/Training/Models/train_labels.json"
+    model_pth = "G:/Shared drives/2_PROJETS/211209_CTSpec_AI_inspection_conduites/2_TECHNIQUE/6_TRAITEMENT/1_DATA/Training/Models/model_0004999.pth"
+    config_yaml = "G:/Shared drives/2_PROJETS/211209_CTSpec_AI_inspection_conduites/2_TECHNIQUE/6_TRAITEMENT/1_DATA/Training/Models/configs.yaml"
+    data_path = "D:/Projets/geostack/ctspec_ai/Data"
 
     with open(json_filepath, "rt") as jsonfile:
         json_data = json.load(jsonfile)
@@ -152,11 +191,49 @@ if __name__ == "__main__":
 
     options = Namespace(
         model=model_pth,
-        num_classes=len(class_names),
         treshold=0.2,
-        config_file=model_zoo.get_config_file(
-            "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
+        config_file=config_yaml
         )
     predictor = Predictor(options)
 
-    preds = predictor.predict("./test/tile_row0_col0.png")
+    img_paths = [
+        "D:/Projets/geostack/ctspector/test.image.vid.4.JPG",
+        "D:/Projets/geostack/ctspector/test.image.vid.1.JPG",
+        "D:/Projets/geostack/ctspector/test.image.vid.2.JPG",
+        "D:/Projets/geostack/ctspector/test.image.vid.3.JPG"]
+    for img_path in img_paths:
+        preds = predictor.predict(img_path)
+
+        img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
+        height = img.shape[0]
+        width = img.shape[1]
+
+        fig, ax = plt.subplots(figsize=(fwidth, fwidth * height/width))
+        ax.imshow(np.asarray(img))
+
+        for i in range(len(preds['classes'])):
+            bbox = preds['boxes'][i]
+            seg = preds['segmentation'][i]
+            score = preds['scores'][i]
+
+            x1 = int(bbox[0])
+            y1 = int(bbox[1])
+            x2 = int(bbox[2])
+            y2 = int(bbox[3])
+
+            xdata = [x1, x2, x2, x1, x1]
+            ydata = [y1, y1, y2, y2, y1]
+
+            plot = ax.plot(xdata, ydata, ls='--', color='red')[0]
+
+            offset = ScaledTranslation(0, 5/72, fig.dpi_scale_trans)
+            ax.text(x1, y1, '{:0.1f}%'.format(score * 100),
+                    color=plot.get_color(),
+                    fontsize=16,
+                    transform=ax.transData + offset)
+
+        ax.set_title(osp.basename(img_path))
+
+        fig.tight_layout()

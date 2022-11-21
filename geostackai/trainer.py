@@ -21,35 +21,30 @@ import detectron2.utils.comm as comm
 import cv2
 import pandas as pd
 
+BASE_HEIGHT = 480
 
-def custom_train_mapper(dataset_dict):
-    """
-    A custom dataset mapper to perform data augmentation on the
-    training dataset.
 
-    https://gilberttanner.com/blog/detectron-2-object-detection-with-pytorch/
-    """
-    dataset_dict = copy.deepcopy(dataset_dict)
-
+def transform_dataset_dict(dataset_dict, transform_list: list = None):
     image = detection_utils.read_image(dataset_dict["file_name"], format="BGR")
+
+    # Calcul scale to height new image size.
+    vscale_factor = BASE_HEIGHT / image.shape[0]
+    new_height = int(image.shape[0] * vscale_factor)
+    new_width = int(image.shape[1] * vscale_factor)
+
+    # Apply transformations to the image.
+    transform_list = [] if transform_list is None else transform_list
+    transform_list.insert(0, T.Resize((new_height, new_width)))
+    image, transforms = T.apply_transform_gens(transform_list, image)
 
     # Remove interlacing artifacts in images taken from lower
     # resolution videos
     image = cv2.GaussianBlur(image, (3, 3), 0)
 
-    transform_list = [
-        T.RandomBrightness(0.8, 1.8),
-        T.RandomContrast(0.6, 1.3),
-        T.RandomSaturation(0.8, 1.4),
-        T.RandomRotation(angle=[90, 90]),
-        T.RandomLighting(0.7),
-        T.RandomFlip(prob=0.4, horizontal=False, vertical=True),
-    ]
-    image, transforms = T.apply_transform_gens(transform_list, image)
-
     dataset_dict["image"] = torch.as_tensor(
         image.transpose(2, 0, 1).astype("float32"))
 
+    # Apply transformations to the annotations.
     annos = [
         detection_utils.transform_instance_annotations(
             obj, transforms, image.shape[:2])
@@ -65,31 +60,31 @@ def custom_train_mapper(dataset_dict):
     return dataset_dict
 
 
+def custom_train_mapper(dataset_dict):
+    """
+    A custom dataset mapper to perform data augmentation on the
+    training dataset.
+
+    https://gilberttanner.com/blog/detectron-2-object-detection-with-pytorch/
+    """
+    dataset_dict = copy.deepcopy(dataset_dict)
+    transform_list = [
+        # T.RandomCrop(crop_type, crop_size),
+        T.RandomBrightness(0.8, 1.8),
+        T.RandomContrast(0.6, 1.3),
+        T.RandomSaturation(0.8, 1.4),
+        # T.RandomRotation(angle=[-90, 90]),
+        T.RandomLighting(0.7),
+        T.RandomFlip(prob=0.4, horizontal=False, vertical=True)]
+    return transform_dataset_dict(dataset_dict, transform_list)
+
+
 def custom_test_mapper(dataset_dict):
     """
     A custom dataset mapper for the validation dataset.
     """
     dataset_dict = copy.deepcopy(dataset_dict)
-    image = detection_utils.read_image(dataset_dict["file_name"], format="BGR")
-
-    # Remove interlacing artifacts in images taken from lower
-    # resolution videos
-    image = cv2.GaussianBlur(image, (3, 3), 0)
-
-    dataset_dict["image"] = torch.as_tensor(
-        image.transpose(2, 0, 1).astype("float32"))
-
-    annos = [
-        obj for obj in dataset_dict.pop("annotations") if
-        obj.get("iscrowd", 0) == 0
-        ]
-    instances = detection_utils.annotations_to_instances(
-        annos, image.shape[:2])
-
-    dataset_dict["instances"] = (
-        detection_utils.filter_empty_instances(instances))
-
-    return dataset_dict
+    return transform_dataset_dict(dataset_dict)
 
 
 class ValLossHook(HookBase):
