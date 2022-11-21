@@ -46,10 +46,6 @@ def format_outputs(prediction):
         )
     try:
         data_out['masks'] = prediction['instances'].pred_masks.cpu().numpy()
-        data_out['segmentation'] = ([
-            list(mask_to_segmentation(out.astype(float))) for
-            out in prediction['instances'].pred_masks.cpu().numpy()
-            ])
     except AttributeError:
         pass
     return data_out
@@ -121,7 +117,7 @@ class Predictor(DefaultPredictor):
 
         super().__init__(cfg)
 
-    def predict(self, path_or_url: str, smooth: bool = True):
+    def predict(self, path_or_url: str):
         if path_or_url.startswith(('http', 'https')):
             image_reponse = requests.get(path_or_url)
             image_as_np_array = np.frombuffer(image_reponse.content, np.uint8)
@@ -129,15 +125,45 @@ class Predictor(DefaultPredictor):
         else:
             image = cv2.imread(path_or_url)
 
-        if smooth is True:
-            # Smooth image to remove interlacing artifacts that are
-            # present in images taken from lower resolution videos
-            image = cv2.GaussianBlur(image, (3, 3), 0)
+        # Calcul scale to height new image size.
+        orig_height = image.shape[0]
+        orig_width = image.shape[1]
 
-        prediction = self(image)
-        outputs = format_outputs(prediction)
+        vscale_factor = BASE_HEIGHT / orig_height
+        new_height = int(image.shape[0] * vscale_factor)
+        new_width = int(image.shape[1] * vscale_factor)
 
-        return outputs
+        # Apply transformations to the image.
+        image, transforms = T.apply_transform_gens(
+            [T.Resize((new_height, new_width))], image)
+
+        # Smooth image to remove interlacing artifacts that are
+        # present in images taken from lower resolution videos
+        image = cv2.GaussianBlur(image, (3, 3), 0)
+
+        # Do the prediction.
+        outputs = self(image)
+
+        prediction = format_outputs(outputs)
+
+        # Transform the predictions back to the original image size.
+        transform = T.Resize((orig_height, orig_width)).get_transform(image)
+
+        prediction['masks'] = [
+            transform.apply_segmentation(mask.astype(np.uint8))
+            for mask in prediction['masks']
+            ]
+        prediction['boxes'] = [
+            transform.apply_coords(
+                np.array(bbox).reshape(-1, 2)).flatten().tolist()
+            for bbox in prediction['boxes']
+            ]
+        prediction['segmentation'] = ([
+            list(mask_to_segmentation(mask.astype(float))) for
+            mask in prediction['masks']
+            ])
+
+        return prediction
 
 
 if __name__ == "__main__":
