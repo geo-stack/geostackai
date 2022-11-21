@@ -27,10 +27,6 @@ BASE_HEIGHT = 480
 def transform_dataset_dict(dataset_dict, transform_list: list = None):
     image = detection_utils.read_image(dataset_dict["file_name"], format="BGR")
 
-    # Remove interlacing artifacts in images taken from lower
-    # resolution videos
-    image = cv2.GaussianBlur(image, (3, 3), 0)
-
     # Calcul scale to height new image size.
     vscale_factor = BASE_HEIGHT / image.shape[0]
     new_height = int(image.shape[0] * vscale_factor)
@@ -40,6 +36,10 @@ def transform_dataset_dict(dataset_dict, transform_list: list = None):
     transform_list = [] if transform_list is None else transform_list
     transform_list.insert(0, T.Resize((new_height, new_width)))
     image, transforms = T.apply_transform_gens(transform_list, image)
+
+    # Remove interlacing artifacts in images taken from lower
+    # resolution videos
+    image = cv2.GaussianBlur(image, (3, 3), 0)
 
     dataset_dict["image"] = torch.as_tensor(
         image.transpose(2, 0, 1).astype("float32"))
