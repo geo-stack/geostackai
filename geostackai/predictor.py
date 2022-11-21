@@ -169,10 +169,21 @@ class Predictor(DefaultPredictor):
 if __name__ == "__main__":
     from argparse import Namespace
     import json
+    import os.path as osp
+    import matplotlib.pyplot as plt
+    from matplotlib.transforms import ScaledTranslation
+    
+    import detectron2.utils.video_visualizer
+    
+    plt.close('all')
+
+    fwidth = 6
 
     # Define the list of class names.
-    json_filepath = "./test/train_labels.json"
-    model_pth = "D:/Projets/geostack/ctspec_ai/Models/model_v3/model_final.pth"
+    json_filepath = "G:/Shared drives/2_PROJETS/211209_CTSpec_AI_inspection_conduites/2_TECHNIQUE/6_TRAITEMENT/1_DATA/Training/Models/train_labels.json"
+    model_pth = "G:/Shared drives/2_PROJETS/211209_CTSpec_AI_inspection_conduites/2_TECHNIQUE/6_TRAITEMENT/1_DATA/Training/Models/model_0004999.pth"
+    config_yaml = "G:/Shared drives/2_PROJETS/211209_CTSpec_AI_inspection_conduites/2_TECHNIQUE/6_TRAITEMENT/1_DATA/Training/Models/configs.yaml"
+    data_path = "D:/Projets/geostack/ctspec_ai/Data"
 
     with open(json_filepath, "rt") as jsonfile:
         json_data = json.load(jsonfile)
@@ -180,11 +191,49 @@ if __name__ == "__main__":
 
     options = Namespace(
         model=model_pth,
-        num_classes=len(class_names),
         treshold=0.2,
-        config_file=model_zoo.get_config_file(
-            "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
+        config_file=config_yaml
         )
     predictor = Predictor(options)
 
-    preds = predictor.predict("./test/tile_row0_col0.png")
+    img_paths = [
+        "D:/Projets/geostack/ctspector/test.image.vid.4.JPG",
+        "D:/Projets/geostack/ctspector/test.image.vid.1.JPG",
+        "D:/Projets/geostack/ctspector/test.image.vid.2.JPG",
+        "D:/Projets/geostack/ctspector/test.image.vid.3.JPG"]
+    for img_path in img_paths:
+        preds = predictor.predict(img_path)
+
+        img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
+        height = img.shape[0]
+        width = img.shape[1]
+
+        fig, ax = plt.subplots(figsize=(fwidth, fwidth * height/width))
+        ax.imshow(np.asarray(img))
+
+        for i in range(len(preds['classes'])):
+            bbox = preds['boxes'][i]
+            seg = preds['segmentation'][i]
+            score = preds['scores'][i]
+
+            x1 = int(bbox[0])
+            y1 = int(bbox[1])
+            x2 = int(bbox[2])
+            y2 = int(bbox[3])
+
+            xdata = [x1, x2, x2, x1, x1]
+            ydata = [y1, y1, y2, y2, y1]
+
+            plot = ax.plot(xdata, ydata, ls='--', color='red')[0]
+
+            offset = ScaledTranslation(0, 5/72, fig.dpi_scale_trans)
+            ax.text(x1, y1, '{:0.1f}%'.format(score * 100),
+                    color=plot.get_color(),
+                    fontsize=16,
+                    transform=ax.transData + offset)
+
+        ax.set_title(osp.basename(img_path))
+
+        fig.tight_layout()
