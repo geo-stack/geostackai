@@ -75,7 +75,7 @@ def custom_train_mapper(dataset_dict):
         T.RandomSaturation(0.8, 1.4),
         # T.RandomRotation(angle=[-90, 90]),
         T.RandomLighting(0.7),
-        T.RandomFlip(prob=0.4, horizontal=False, vertical=True)]
+        T.RandomFlip(prob=0.4, horizontal=True, vertical=False)]
     return transform_dataset_dict(dataset_dict, transform_list)
 
 
