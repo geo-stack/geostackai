@@ -88,6 +88,22 @@ def export_to_coco(dataset, export_dir: str, data_path: str, prefix: str = ''):
     with open(label_path, 'w') as jsonfile:
         json.dump(json_data, jsonfile, indent=2, separators=(",", ": "))
 
+
+def export_to_cvat(dataset, export_dir: str):
+    dataset.export(
+        export_dir=export_dir,
+        data_path=osp.join(export_dir, 'Data'),
+        dataset_type=fo.types.COCODetectionDataset,
+        export_media=True,
+        )
+
+    label_path = osp.join(export_dir, 'labels.json')
+    with open(label_path, "rt") as jsonfile:
+        json_data = json.load(jsonfile)
+    with open(label_path, 'w') as jsonfile:
+        json.dump(json_data, jsonfile, indent=2, separators=(",", ": "))
+
+
 def save_dataset_to_json(dataset: Dataset, export_dir: str, rel_dir: str):
     dataset.export(
         export_dir=export_dir,
