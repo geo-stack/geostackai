@@ -72,6 +72,22 @@ def load_dataset_from_json(dataset_dir, data_dir, dataset_name):
         name=dataset_name)
 
 
+def export_to_coco(dataset, export_dir: str, data_path: str, prefix: str = ''):
+    label_path = osp.join(export_dir, prefix + 'labels.json')
+
+    dataset.export(
+        export_dir=export_dir,
+        data_path=data_path,
+        label_path=label_path,
+        dataset_type=fo.types.COCODetectionDataset,
+        export_media=False,
+        )
+
+    with open(label_path, "rt") as jsonfile:
+        json_data = json.load(jsonfile)
+    with open(label_path, 'w') as jsonfile:
+        json.dump(json_data, jsonfile, indent=2, separators=(",", ": "))
+
 def save_dataset_to_json(dataset: Dataset, export_dir: str, rel_dir: str):
     dataset.export(
         export_dir=export_dir,
