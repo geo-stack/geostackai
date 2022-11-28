@@ -64,14 +64,6 @@ def add_pred_to_sample(sample, preds, class_names: dict, label_name: str):
     sample.save()
 
 
-def load_dataset_from_json(dataset_dir, data_dir, dataset_name):
-    return fo.Dataset.from_dir(
-        dataset_dir=dataset_dir,
-        rel_dir=data_dir,
-        dataset_type=fo.types.FiftyOneDataset,
-        name=dataset_name)
-
-
 def export_to_coco(dataset, export_dir: str, data_path: str, prefix: str = ''):
     label_path = osp.join(export_dir, prefix + 'labels.json')
 
@@ -104,12 +96,39 @@ def export_to_cvat(dataset, export_dir: str):
         json.dump(json_data, jsonfile, indent=2, separators=(",", ": "))
 
 
+def load_dataset_from_json(dataset_dir, data_dir, dataset_name):
+    """Load a FiftyOneDataset fom json."""
+    dataset = fo.Dataset.from_dir(
+        dataset_dir=dataset_dir,
+        dataset_type=fo.types.FiftyOneDataset,
+        name=dataset_name)
+
+    # We need to do this ourselves because we do not thrust fiftyone to handle
+    # the path sep "/" and "\\" correctlty.
+    for sample in dataset:
+        filepath = osp.join(data_dir, sample.filepath).replace('\\', '/')
+        sample.filepath = filepath
+        sample.save()
+
+    return dataset
+
+
 def save_dataset_to_json(dataset: Dataset, export_dir: str, rel_dir: str):
-    dataset.export(
+    """Save a FiftyOneDataset to json."""
+    clone = dataset.clone(persistent=False)
+
+    # We need to do this ourselves because fiftyone is not handling
+    # the path sep "/" and "\\" correctlty.
+    for sample in clone:
+        # Fix sample path format (this is required for macOS compatibility).
+        filepath = osp.relpath(sample.filepath, rel_dir).replace('\\', '/')
+        sample.filepath = filepath
+        sample.save()
+
+    clone.export(
         export_dir=export_dir,
         dataset_type=fo.types.FiftyOneDataset,
         export_media=False,
-        rel_dir=rel_dir
         )
 
     for filename in ['samples.json', 'metadata.json']:
@@ -118,6 +137,8 @@ def save_dataset_to_json(dataset: Dataset, export_dir: str, rel_dir: str):
             json_data = json.load(jsonfile)
         with open(_samples_path, 'w') as jsonfile:
             json.dump(json_data, jsonfile, indent=2, separators=(",", ": "))
+
+    fo.delete_dataset(clone.name)
 
 
 if __name__ == '__main__':
