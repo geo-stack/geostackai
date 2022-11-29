@@ -15,4 +15,5 @@ __project_url__ = "https://github.com/geo-stack/geostackai"
 
 
 from geostackai.loss import plot_loss, get_loss
-from geostackai.fohelpers import save_dataset_to_json, load_dataset_from_json
+from geostackai.fohelpers import (
+    save_dataset_to_json, load_dataset_from_json, export_to_coco)

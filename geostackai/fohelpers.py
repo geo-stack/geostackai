@@ -64,21 +64,31 @@ def add_pred_to_sample(sample, preds, class_names: dict, label_name: str):
     sample.save()
 
 
-def export_to_coco(dataset, export_dir: str, data_path: str, prefix: str = ''):
-    label_path = osp.join(export_dir, prefix + 'labels.json')
-
+def export_to_coco(dataset: Dataset, export_dir: str,
+                   export_media: bool = False, prefix: str = '',
+                   data_path: str = None, categories_json: str = None):
+    """
+    Export a fiftyone dataset to the COCO format.
+    """
     dataset.export(
         export_dir=export_dir,
         data_path=data_path,
-        label_path=label_path,
         dataset_type=fo.types.COCODetectionDataset,
-        export_media=False,
+        export_media=export_media,
+        label_field='ground_truth'
         )
 
-    with open(label_path, "rt") as jsonfile:
+    with open(osp.join(export_dir, 'labels.json'), "rt") as jsonfile:
         json_data = json.load(jsonfile)
-    with open(label_path, 'w') as jsonfile:
+    with open(osp.join(export_dir, f'{prefix}labels.json'), 'w') as jsonfile:
         json.dump(json_data, jsonfile, indent=2, separators=(",", ": "))
+    os.remove(osp.join(export_dir, 'labels.json'))
+
+    if categories_json is not None:
+        # Save a dictionaries with the categories in a json file.
+        categories = {c['id']: c['name'] for c in json_data['categories']}
+        with open(osp.join(export_dir, categories_json), 'w') as jsonfile:
+            json.dump(categories, jsonfile, indent=2, separators=(",", ": "))
 
 
 def export_to_cvat(dataset, export_dir: str):
