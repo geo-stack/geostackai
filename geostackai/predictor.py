@@ -8,6 +8,8 @@
 #
 # https://github.com/geo-stack/geostackai
 # =============================================================================
+from __future__ import annotations
+
 import os
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 os.environ['KMP_DUPLICATE_LIB_OK'] = "True"
