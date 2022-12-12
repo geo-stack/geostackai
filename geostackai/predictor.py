@@ -117,13 +117,17 @@ class Predictor(DefaultPredictor):
 
         super().__init__(cfg)
 
-    def predict(self, path_or_url: str):
-        if path_or_url.startswith(('http', 'https')):
-            image_reponse = requests.get(path_or_url)
-            image_as_np_array = np.frombuffer(image_reponse.content, np.uint8)
-            image = cv2.imdecode(image_as_np_array, cv2.IMREAD_COLOR)
+    def predict(self, image: str | np.ndarray):
+        if not isinstance(image, np.ndarray):
+            if image.startswith(('http', 'https')):
+                image_reponse = requests.get(image)
+                image_as_np_array = np.frombuffer(
+                    image_reponse.content, np.uint8)
+                image = cv2.imdecode(image_as_np_array, cv2.IMREAD_COLOR)
+            else:
+                image = cv2.imread(image)
         else:
-            image = cv2.imread(path_or_url)
+            image = cv2.imdecode(image, cv2.IMREAD_COLOR)
 
         # Calcul scale to height new image size.
         orig_height = image.shape[0]
