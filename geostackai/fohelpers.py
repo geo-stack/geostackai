@@ -21,7 +21,11 @@ import os
 import os.path as osp
 
 # ---- Third party app
+import numpy as np
 import fiftyone as fo
+from fiftyone import ViewField as F
+from fiftyone.utils.coco import _coco_segmentation_to_mask
+from fiftyone.utils.iou import compute_ious
 
 
 def add_pred_to_sample(sample, preds, class_names: dict, label_name: str):
@@ -149,6 +153,124 @@ def save_dataset_to_json(dataset: Dataset, export_dir: str, rel_dir: str):
             json.dump(json_data, jsonfile, indent=2, separators=(",", ": "))
 
     fo.delete_dataset(clone.name)
+
+
+def add_inferences_to_dataset(
+        dataset: Dataset, infer_json: str, field: str,
+        class_names: list[str], load_segmentation: bool = True,
+        iou_treshold: float = 0.1, score_treshold: float = 0.9):
+    """
+    Add inference results to dataset in label.
+
+    Parameters
+    ----------
+    dataset : Dataset
+        The fiftyone dataset to which to add the inferred detections.
+    infer_json : str
+        The path to the json file containing the data of the
+        inferred detections.
+    field : str
+        The sample field to which to add the inferred detections.
+    class_names : list[str]
+        The list of class labels of the inferred detections.
+    load_segmentation : bool, optional
+        Whether to load the segmentation in addition to the bounding
+        boxes of the detected object. The default is True.
+    iou_treshold : float, optional
+        A value between 0 and 1 corresponding to the IOU (Intersection over
+        Union) treshold to use when adding inferred detections to samples.
+        The default is 0.1. Inferred dections are rejected if they share a IOU
+        value above that treshold with an existing detection of the same class.
+    score_treshold : float, optional
+        A value between 0 and 1 corresponding to the minimum score inferred
+        detections must have, otherwise they are rejected. The default is 0.9.
+    """
+    n_added_total = 0
+
+    # Load inference data.
+    with open(infer_json, "rt") as jsonfile:
+        infer_data = json.load(jsonfile)
+
+    # Check that the 'filename' sample field exists and add it otherwise.
+    for sample in dataset:
+        if 'filename' not in sample:
+            sample['filename'] = osp.basename(sample['filepath'])
+            sample.save()
+
+    sample_count = len(infer_data)
+    for k, (img_file, img_infer) in enumerate(infer_data.items()):
+        print("\rProcessing sample {} of {}          "
+              .format(k + 1, sample_count), end='')
+
+        sample = dataset.match(F("filename") == osp.basename(img_file)).first()
+
+        w = sample['metadata']['width']
+        h = sample['metadata']['height']
+
+        classes = img_infer['classes']
+        boxes = img_infer['boxes']
+        scores = img_infer['scores']
+        segmentations = img_infer['segmentation']
+
+        if field in sample:
+            detections = [d for d in sample[field]['detections']]
+        else:
+            detections = []
+
+        # Make sure original detections that were identified manually are
+        # clearly indicated as such in the dataset.
+        for detection in detections:
+            if 'inferred' not in detection:
+                detection['inferred'] = False
+
+        # We loop over the new detections in descending order of their score.
+        argsort = np.argsort(scores)
+        for i in reversed(argsort):
+            if scores[i] < score_treshold:
+                break
+
+            seg = segmentations[i]
+            if len(seg) == 0 or load_segmentation is False:
+                # Convert to [top-left-x, top-left-y, width, height]
+                # in relative coordinates in [0, 1] x [0, 1]
+                x1, y1, x2, y2 = boxes[i]
+                bbox = [x1 / w, y1 / h, (x2 - x1) / w, (y2 - y1) / h]
+
+                inferred_detection = fo.Detection(
+                    label=class_names[classes[i]],
+                    bounding_box=bbox,
+                    confidence=scores[i])
+            else:
+                # We want the mask to span the entire image frame.
+                bbox = [0, 0, w, h]
+                mask = _coco_segmentation_to_mask(seg, bbox, (w, h))
+
+                inferred_detection = fo.Detection.from_mask(
+                    mask=mask,
+                    label=class_names[classes[i]],
+                    confidence=scores[i])
+
+            # Indicate that this detection was inferred from a machine learning
+            # object detection model.
+            inferred_detection['inferred'] = True
+
+            # We reject the new detection if there is an existing detection
+            # of the same class that shares an IOU above the specified
+            # treshold.
+            max_ious = np.max(compute_ious(
+                [inferred_detection],
+                detections,
+                classwise=True,
+                use_boxes=True))
+            if max_ious < iou_treshold:
+                detections.append(inferred_detection)
+                n_added_total += 1
+
+        # Save the augmented detection list to the sample.
+        sample[field] = fo.Detections(detections=detections)
+        sample.save()
+
+    print(f'{n_added_total} inferred detections added to the dataset.')
 
 
 if __name__ == '__main__':
