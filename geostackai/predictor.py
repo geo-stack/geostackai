@@ -128,8 +128,6 @@ class Predictor(DefaultPredictor):
                 image = cv2.imdecode(image_as_np_array, cv2.IMREAD_COLOR)
             else:
                 image = cv2.imread(image)
-        else:
-            image = cv2.imdecode(image, cv2.IMREAD_COLOR)
 
         # Calcul scale to height new image size.
         orig_height = image.shape[0]
