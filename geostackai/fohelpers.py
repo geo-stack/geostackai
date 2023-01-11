@@ -158,7 +158,7 @@ def save_dataset_to_json(dataset: Dataset, export_dir: str, rel_dir: str):
 def add_inferences_to_dataset(
         dataset: Dataset, infer_json: str, field: str,
         class_names: list[str], load_segmentation: bool = True,
-        iou_treshold: float = 0.1, score_treshold: float = 0.9):
+        iou_treshold: float = None, score_treshold: float = None):
     """
     Add inference results to dataset in label.
 
@@ -179,11 +179,13 @@ def add_inferences_to_dataset(
     iou_treshold : float, optional
         A value between 0 and 1 corresponding to the IOU (Intersection over
         Union) treshold to use when adding inferred detections to samples.
-        The default is 0.1. Inferred dections are rejected if they share a IOU
-        value above that treshold with an existing detection of the same class.
+        By default, iou_treshold is None and is ignored. Inferred dections are
+        rejected if they share a IOU value above that treshold with an
+        existing detection of the same class.
     score_treshold : float, optional
         A value between 0 and 1 corresponding to the minimum score inferred
-        detections must have, otherwise they are rejected. The default is 0.9.
+        detections must have, otherwise they are rejected. By default,
+        score_treshold is None and is ignored.
     """
     n_added_total = 0
 
@@ -202,7 +204,10 @@ def add_inferences_to_dataset(
         print("\rProcessing sample {} of {}          "
               .format(k + 1, sample_count), end='')
 
-        sample = dataset.match(F("filename") == osp.basename(img_file)).first()
+        view = dataset.match(F("filename") == osp.basename(img_file))
+        if view.count() == 0:
+            continue
+        sample = view.first()
 
         w = sample['metadata']['width']
         h = sample['metadata']['height']
@@ -226,7 +231,7 @@ def add_inferences_to_dataset(
         # We loop over the new detections in descending order of their score.
         argsort = np.argsort(scores)
         for i in reversed(argsort):
-            if scores[i] < score_treshold:
+            if score_treshold is not None and scores[i] < score_treshold:
                 break
 
             seg = segmentations[i]
@@ -257,21 +262,25 @@ def add_inferences_to_dataset(
             # We reject the new detection if there is an existing detection
             # of the same class that shares an IOU above the specified
             # treshold.
-            max_ious = np.max(compute_ious(
-                [inferred_detection],
-                detections,
-                classwise=True,
-                use_boxes=True))
-            if max_ious < iou_treshold:
+            if iou_treshold is None:
                 detections.append(inferred_detection)
                 n_added_total += 1
+            else:
+                if len(detections):
+                    max_ious = np.max(compute_ious(
+                        [inferred_detection],
+                        detections,
+                        classwise=True,
+                        use_boxes=True))
+                    if max_ious < iou_treshold:
+                        detections.append(inferred_detection)
+                        n_added_total += 1
+                else:
+                    detections.append(inferred_detection)
+                    n_added_total += 1
 
         # Save the augmented detection list to the sample.
         sample[field] = fo.Detections(detections=detections)
         sample.save()
 
     print(f'{n_added_total} inferred detections added to the dataset.')
-
-
-if __name__ == '__main__':
-    pass
