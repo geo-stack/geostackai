@@ -177,13 +177,6 @@ if __name__ == "__main__":
     import json
     import os.path as osp
     import matplotlib.pyplot as plt
-    from matplotlib.transforms import ScaledTranslation
-    import detectron2.utils.video_visualizer
-    from norfair import Tracker, Detection
-    from norfair.camera_motion import MotionEstimator, HomographyTransformationGetter
-    from norfair.drawing import _centroid
-    from norfair.filter import NoFilterFactory
-
     plt.close('all')
 
     dirpath = (
@@ -208,94 +201,3 @@ if __name__ == "__main__":
             "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
         )
     predictor = Predictor(options)
-
-    tracker = Tracker(
-        distance_function='iou',
-        distance_threshold=1,
-        initialization_delay=1,
-        filter_factory=NoFilterFactory(),
-        )
-
-    transformations_getter = HomographyTransformationGetter()
-    motion_estimator = MotionEstimator(
-        transformations_getter=transformations_getter
-        )
-
-    img_paths = [
-        "D:/Projets/geostack/ctspector/test.image.vid.1.JPG",
-        "D:/Projets/geostack/ctspector/test.image.vid.2.JPG",
-        "D:/Projets/geostack/ctspector/test.image.vid.3.JPG",
-        "D:/Projets/geostack/ctspector/test.image.vid.4.JPG"
-        ] * 1
-    for img_path in img_paths[:2]:
-        trans = motion_estimator.update(cv2.imread(img_path))
-
-        preds = predictor.predict(img_path)
-
-        detections = []
-        for i in range(len(preds["classes"])):
-            boxes = np.array(preds["boxes"][i]).reshape(-1, 2)
-            detections.append(
-                Detection(
-                    points=boxes,
-                    label=preds["classes"][i]
-                    ))
-
-        tracked_objects = tracker.update(
-            detections=detections,
-            coord_transformations=trans
-            )
-        for obj in tracked_objects:
-            print(obj.estimate)
-            print(obj.live_points)
-
-        img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-
-        height = img.shape[0]
-        width = img.shape[1]
-        fwidth = 6
-
-        fig, ax = plt.subplots(figsize=(fwidth, fwidth * height/width))
-        ax.imshow(np.asarray(img))
-
-        for obj in tracked_objects:
-            bbox = obj.estimate[obj.live_points].flatten()
-
-            x1 = int(bbox[0])
-            y1 = int(bbox[1])
-            x2 = int(bbox[2])
-            y2 = int(bbox[3])
-
-            xdata = [x1, x2, x2, x1, x1]
-            ydata = [y1, y1, y2, y2, y1]
-
-            plot = ax.plot(xdata, ydata, ls='-', color='yellow')[0]
-
-            # x, y = _centroid(obj.estimate[obj.points])
-            # ax.text(x, y, str(obj.id), color='red', fontsize=16)
-
-        for i in range(len(preds['classes'])):
-            bbox = preds['boxes'][i]
-            seg = preds['segmentation'][i]
-            score = preds['scores'][i]
-
-            x1 = int(bbox[0])
-            y1 = int(bbox[1])
-            x2 = int(bbox[2])
-            y2 = int(bbox[3])
-
-            xdata = [x1, x2, x2, x1, x1]
-            ydata = [y1, y1, y2, y2, y1]
-
-            plot = ax.plot(xdata, ydata, ls='--', color='red')[0]
-
-            offset = ScaledTranslation(0, 5/72, fig.dpi_scale_trans)
-            ax.text(x1, y1, '{:0.1f}%'.format(score * 100),
-                    color=plot.get_color(),
-                    fontsize=16,
-                    transform=ax.transData + offset)
-
-        ax.set_title(osp.basename(img_path))
-
-        fig.tight_layout()
