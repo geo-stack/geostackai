@@ -217,7 +217,7 @@ def add_inferences_to_dataset(
         scores = img_infer['scores']
         segmentations = img_infer['segmentation']
 
-        if field in sample:
+        if field in sample and sample[field] is not None:
             detections = [d for d in sample[field]['detections']]
         else:
             detections = []
