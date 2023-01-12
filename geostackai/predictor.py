@@ -121,7 +121,6 @@ class Predictor(DefaultPredictor):
         except AttributeError:
             cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
 
-
         super().__init__(cfg)
 
     def predict(self, image: str | np.ndarray):
