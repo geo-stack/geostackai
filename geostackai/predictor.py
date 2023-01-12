@@ -85,26 +85,43 @@ def mask_to_segmentation(binary_mask):
 
 class Predictor(DefaultPredictor):
 
-    def __init__(self, options):
+    def __init__(self, model_file: str, config_file: str,
+                 score_treshold: float = 0.5, num_classes: int = None):
+        """
+        Parameters
+        ----------
+        model_file : str
+            The absolute path to the object detection model PTH file.
+        config_file : str
+            The absolute path to the configuration file of the model.
+        score_treshold : float
+            A value between 0 and 1 corresponding to the minimum score inferred
+            detections must have, otherwise they are rejected. By default,
+            score_treshold is None and is ignored.
+        num_classes : int
+            The number of classes that can be predicted by the model.
+            This is useful in case a generic config file is used to run
+            a custom model, for example by doing :
+
+                config_file = model_zoo.get_config_file(
+                    "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
+                    )
+        """
+        if score_treshold < 0 or score_treshold > 1:
+            raise ValueError(
+                f'score_treshold must be between 0 and 1. '
+                f'The value provided was {score_treshold}.')
 
         cfg = get_cfg()
 
         # https://github.com/facebookresearch/detectron2/issues/2082
         cfg.set_new_allowed(True)
-
-        try:
-            config_file = options.config_file
-        except AttributeError:
-            config_file = model_zoo.get_config_file(
-                "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
         cfg.merge_from_file(config_file)
 
-        try:
-            cfg.MODEL.ROI_HEADS.NUM_CLASSES = options.num_classes
-        except AttributeError:
-            pass
+        if num_classes is not None:
+            cfg.MODEL.ROI_HEADS.NUM_CLASSES = num_classes
 
-        cfg.MODEL.WEIGHTS = options.model
+        cfg.MODEL.WEIGHTS = model_file
         cfg.SOLVER.IMS_PER_BATCH = 1
 
         if torch.cuda.is_available():
@@ -115,11 +132,7 @@ class Predictor(DefaultPredictor):
                   'calculations will be performed on CPU instead.')
 
         # Set the minimum score threshold
-        try:
-            cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = float(
-                options.score_treshold)
-        except AttributeError:
-            cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
+        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = score_treshold
 
         super().__init__(cfg)
 
@@ -175,7 +188,6 @@ class Predictor(DefaultPredictor):
 
 
 if __name__ == "__main__":
-    from argparse import Namespace
     import json
     import os.path as osp
     import matplotlib.pyplot as plt
@@ -195,11 +207,10 @@ if __name__ == "__main__":
         json_data = json.load(jsonfile)
     class_names = [cat['name'] for cat in json_data['categories']]
 
-    options = Namespace(
-        model=model_pth,
-        num_classes=len(class_names),
-        score_treshold=0.2,
+    predictor = Predictor(
+        model_file=model_pth,
         config_file=model_zoo.get_config_file(
-            "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
+            "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"),
+        score_treshold=0.2,
+        num_classes=len(class_names),
         )
-    predictor = Predictor(options)
