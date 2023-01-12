@@ -97,8 +97,8 @@ class Predictor(DefaultPredictor):
         except AttributeError:
             config_file = model_zoo.get_config_file(
                 "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
-
         cfg.merge_from_file(config_file)
+
         try:
             cfg.MODEL.ROI_HEADS.NUM_CLASSES = options.num_classes
         except AttributeError:
@@ -114,8 +114,13 @@ class Predictor(DefaultPredictor):
             print(' * GPU calculations are unavailable on this device: '
                   'calculations will be performed on CPU instead.')
 
-        # Set the testing threshold for this model.
-        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = options.treshold
+        # Set the minimum score threshold
+        try:
+            cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = float(
+                options.score_treshold)
+        except AttributeError:
+            cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
+
 
         super().__init__(cfg)
 
@@ -194,7 +199,7 @@ if __name__ == "__main__":
     options = Namespace(
         model=model_pth,
         num_classes=len(class_names),
-        treshold=0.2,
+        score_treshold=0.2,
         config_file=model_zoo.get_config_file(
             "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
         )
