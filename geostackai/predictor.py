@@ -146,6 +146,15 @@ class Predictor(DefaultPredictor):
             else:
                 image = cv2.imread(image)
 
+        if image is None:
+            outputs = {
+                'classes': [],
+                'boxes': [],
+                'scores': [],
+                'segmentation': []
+                }
+            print("ValueError: image is not valid.")
+
         # Calcul scale to height new image size.
         orig_height = image.shape[0]
         orig_width = image.shape[1]
