@@ -25,16 +25,18 @@ BASE_HEIGHT = 480
 
 
 def transform_dataset_dict(dataset_dict, transform_list: list = None):
+    transform_list = [] if transform_list is None else transform_list
     image = detection_utils.read_image(dataset_dict["file_name"], format="BGR")
 
-    # Calcul scale to height new image size.
+    # Calcul the dimension of the resized image.
     vscale_factor = BASE_HEIGHT / image.shape[0]
     new_height = int(image.shape[0] * vscale_factor)
     new_width = int(image.shape[1] * vscale_factor)
 
-    # Apply transformations to the image.
-    transform_list = [] if transform_list is None else transform_list
+    # Add a resize transformation on top of the transformations stack.
     transform_list.insert(0, T.Resize((new_height, new_width)))
+
+    # Apply transformations to the image.
     image, transforms = T.apply_transform_gens(transform_list, image)
 
     # Remove interlacing artifacts in images taken from lower
@@ -69,11 +71,9 @@ def custom_train_mapper(dataset_dict):
     """
     dataset_dict = copy.deepcopy(dataset_dict)
     transform_list = [
-        # T.RandomCrop(crop_type, crop_size),
         T.RandomBrightness(0.8, 1.8),
         T.RandomContrast(0.6, 1.3),
         T.RandomSaturation(0.8, 1.4),
-        # T.RandomRotation(angle=[-90, 90]),
         T.RandomLighting(0.7),
         T.RandomFlip(prob=0.4, horizontal=True, vertical=False)]
     return transform_dataset_dict(dataset_dict, transform_list)
