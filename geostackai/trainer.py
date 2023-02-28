@@ -15,6 +15,7 @@ from detectron2.engine import DefaultTrainer
 from detectron2.data import (
     DatasetMapper, build_detection_test_loader, build_detection_train_loader,
     detection_utils)
+from detectron2.evaluation import COCOEvaluator
 import detectron2.data.transforms as T
 from detectron2.engine import HookBase
 import detectron2.utils.comm as comm
@@ -138,6 +139,12 @@ class Trainer(DefaultTrainer):
     @classmethod
     def build_train_loader(cls, cfg):
         return build_detection_train_loader(cfg, mapper=custom_train_mapper)
+
+    @classmethod
+    def build_evaluator(cls, cfg, dataset_name):
+        return COCOEvaluator(dataset_name,
+                             cfg,
+                             True)
 
     def build_hooks(self):
         """
